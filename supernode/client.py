@@ -31,7 +31,7 @@ print('Successfully get the file')
 s.close()
 print('connection closed')
 '''
-
+'''
 TCP_IP = 'localhost'
 TCP_PORT = 12121    
 BUFFER_SIZE = 1024
@@ -43,3 +43,23 @@ s.send(msg)
 s.close()
 print "I'm Alive BRO!!!"
 time.sleep(100)
+'''
+TCP_IP = '10.196.7.181'
+TCP_PORT = 12121
+BUFFER_SIZE  = 1024
+tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+tcpsock.bind(("10.196.7.181", TCP_PORT))
+# tcpsock.settimeout(10)
+try:
+    tcpsock.listen(5)
+    print "Checking for Node Alive "+ TCP_IP
+    (conn, (ip, port)) = tcpsock.accept()
+    msg = conn.recv(1024)
+except socket.timeout as e:
+    print e
+    # child.liveStatus = False
+    print "Node is Dead AF : " + TCP_IP
+    tcpsock.close()
+print "Node is Alive :) " + TCP_IP
+tcpsock.close()                

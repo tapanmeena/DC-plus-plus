@@ -48,6 +48,7 @@ while True:
 for t in threads:
     t.join()
 '''
+'''
 TCP_IP = '10.196.7.142'
 TCP_PORT = 12121
 BUFFER_SIZE  = 1024
@@ -71,3 +72,38 @@ if msg != "Alive":
 else:
 	print "Node is Alive :) " + ip
 tcpsock.close()
+'''
+# while True:
+#     TCP_IP = '10.196.7.181'
+#     # some_IP = 'localhost'
+#     TCP_PORT = 12121    
+#     BUFFER_SIZE = 1024
+#     print "TCP " +TCP_IP
+
+#     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     s.connect(("10.196.7.181", TCP_PORT))
+#     msg = "Alive"
+#     print msg
+#     s.send(msg)
+#     s.close()
+#     print "I'm Alive BRO!!!"
+#     time.sleep(100) 
+import subprocess
+# filename = 'client.py'
+# hashList = []
+# for i in range(1,4+1):
+#     bashcommand = "md5sum "+str(filename)
+#     Hash = subprocess.check_output(['bash','-c', bashcommand])
+#     Hash = Hash.split(' ')
+#     print Hash[0]
+#     hashList.append(Hash[0])
+# print(hashList)
+bashCommand = "ls -l | awk '{print $6, $7, $8, $9 }'"
+fileList = subprocess.check_output(['bash','-c', bashCommand])
+fileList = fileList.split('\n')
+numFiles = len(fileList)
+for i in range(1, numFiles-1):
+    item = fileList[i].split(' ')
+    timeStamp = str(item[0]) + str(item[1]) + str(item[2])
+    fileName = str(item[3])
+    print fileName

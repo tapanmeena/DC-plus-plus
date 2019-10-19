@@ -1,10 +1,13 @@
-#livestatus port number : 12121
-#broadcasting port number : 44444
+# broadcasting port number : 44444
+# livestatus port number : 12121
+# addFile() sharing port : 9005
+
 import socket
 import subprocess
 import threading
 import os
 import time
+import pickle
 
 nFiles = 0
 class Node:
@@ -33,7 +36,31 @@ class File:
 # containing objects of Node
 childNodes = []
 fileMap = {}
-    
+
+def addFiles(IPAddr):
+    TCP_IP = IPAddr
+    TCP_PORT = 9005
+    BUFFER_SIZE  = 1024
+    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+    tcpsock.bind((TCP_IP, TCP_PORT))
+    tcpsock.settimeout(10) 
+    try:
+        tcpsock.listen(5)
+        print "adding files -->"+ TCP_IP
+        (conn, (ip, port)) = tcpsock.accept()
+        msg = conn.recv(1024)
+        data = pickle.loads(msg)
+        print "----------"
+        for x in data:
+            print x
+        print "----------" 
+    except socket.timeout as e:
+        print "files addition socket timeout : " + TCP_IP
+        tcpsock.close()
+        return
+    tcpsock.close()
+
 
 def assignSuperNode():
     # accept requests to become superNode
@@ -51,32 +78,32 @@ def assignSuperNode():
                 childNodes[childNodes.index(Node(addr[0], False))].liveStatus = True
                 print('----------dead to alive-------')
                 #TODO
-                #pickle pass
-                # updateFiles(data)
+                addFiles(addr[0])
             else:
                 childNodes.append(Node(addr[0], True))
                 print('------adding new node ----------')
                 #TODO 
-                #pickle pass list as msg
-                # addFiles(data)
+                addFiles(addr[0])
 
 def heartBeat():
+    print 'Inside HeartBeat'
     while True:
+        # TCP_IP = "10.196.7.181"
         for child in childNodes:
-            print "Child IP : "+child.IPAddr
-            if child.liveStatus:
+            if(child.liveStatus):
+                print "Child IP : "+child.IPAddr
                 TCP_IP = child.IPAddr
                 TCP_PORT = 12121
                 BUFFER_SIZE  = 1024
                 tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-                tcpsock.bind((TCP_IP, TCP_PORT))
-                tcpsock.settimeout(10)
+                tcpsock.bind((str(child.IPAddr), TCP_PORT))
+                tcpsock.settimeout(10) 
                 try:
                     tcpsock.listen(5)
                     print "Checking for Node Alive "+ TCP_IP
                     (conn, (ip, port)) = tcpsock.accept()
-                    msg = tcpsock.recv(1024)
+                    msg = conn.recv(1024)
                 except socket.timeout as e:
                     child.liveStatus = False
                     print "Node is Dead AF : " + TCP_IP
@@ -84,8 +111,8 @@ def heartBeat():
                     continue
                 print "Node is Alive :) " + TCP_IP
                 tcpsock.close()                
-        time.sleep(10)
-
+        time.sleep(300)
+                
 if __name__ ==  "__main__": 
     
     threads = []
@@ -96,7 +123,8 @@ if __name__ ==  "__main__":
     # print("Main thread name: {}".format(threading.main_thread().name)) 
 
     # creating threads 
-    t1 = threading.Thread(target=assignSuperNode, name='t1')  
+    t1 = threading.Thread(target=assignSuperNode, name='t1')
+    # print 'after assigning'
     hbt = threading.Thread(target = heartBeat, name = 'heartBeat')
 
     threads.append(t1)
