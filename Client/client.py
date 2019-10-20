@@ -1,6 +1,7 @@
 #livestatus port number : 12121
 #broadcasting port number : 44444
 # addFile() sharing port : 9005
+# supernode to supernode communication PORT : 9999
 
 import os, sys, threading, socket, time, csv, pickle, subprocess
 
@@ -157,21 +158,25 @@ class FileSplitter:
 #--------------------------------------------------------- 
 
 def aliveChecker():
-    # time.sleep(8)
+    time.sleep(8)
     while True:
         TCP_IP = str(ipAddr)
-        TCP_PORT = 12121    
+        TCP_PORT = 12121
         BUFFER_SIZE = 1024
-        print "TCP->" + TCP_IP
+        # print "TCP->" + TCP_IP
 
         p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        p.connect((str(TCP_IP), TCP_PORT))
-        msg = "Alive"
-        print msg
-        p.send(msg)
-        p.close()
-        print "I'm Alive BRO!!!"
-        time.sleep(100) 
+        try:
+            p.connect((str(TCP_IP), TCP_PORT))
+            msg = "Alive"
+            print msg
+            p.send(msg)
+            p.close()
+            print "I'm Alive BRO!!!"
+            time.sleep(100)
+        except socket.error , exc:
+            # print "Error Caught : ",exc
+            time.sleep(20)
 
 def superNodeAssign():
     global ipAddr
@@ -198,6 +203,15 @@ def superNodeAssign():
         time.sleep(1)
     print "Super Node Ip Address : "+ str(ipAddr)
     listFiles()
+
+#assumption a list of fileName is coming
+def fileRequest(fileList):
+    fileList.sort()
+    tempList = []
+    while True:
+        i = 1
+        for item in fileList:
+            print i, item
 
 def sharing():
     #for sending filename and receiving File from server(sender)
@@ -250,6 +264,11 @@ def removeSplittedFiles(filename):
     command = "rm "+str(filename)+"-*"
     os.system(command)
 
+def Diff(li1, li2):
+    li_dif = [i for i in li1 + li2 if i not in li1 or i not in li2] 
+    return li_dif
+    # return (list(set(list1) - set(list2)))
+
 def listFiles():
     filename = 'listFiles.csv'
     fileDump = []
@@ -276,7 +295,8 @@ def listFiles():
 
                 removeSplittedFiles(fileName)
                 # print hashes
-                filewriter.writerow([fileName, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                filewriter.writerow([fileName, hashes[0], hashes[1], hashes[2], hashes[3],"add", date, time])
+                fileDump.append([fileName, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
     else:
         print("-------> If List Files Exist <-------")
         originalFileContent = dumpContent(filename)
@@ -284,6 +304,7 @@ def listFiles():
         print originalFileContent
         os.remove('listFiles.csv')
         fileNameList = []
+        newFileNameList = []
         timeStampList = []
         dateStampList = []
         hashesList = []
@@ -301,6 +322,7 @@ def listFiles():
                 date = str(item[0]) + str(item[1])
                 time = str(item[2])
                 fileN = str(item[3])
+                newFileNameList.append(fileN)
 
                 #check if file exist and its time stamp with recorded LOG
                 if(fileN in fileNameList):
@@ -315,7 +337,7 @@ def listFiles():
                         fsp = FileSplitter()
                         fsp.doWork(fileN, 'split')
                         hashes = computeHash(fileN)
-                        filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                        filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3],"add", date, time])
                         fileDump.append([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
                         removeSplittedFiles(fileN)
 
@@ -325,32 +347,38 @@ def listFiles():
                             fsp = FileSplitter()
                             fsp.doWork(fileN, 'split')
                             hashes = computeHash(fileN)
-                            filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                            filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3],"add", date, time])
                             fileDump.append([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
                             removeSplittedFiles(fileN)
                         else:
                             fileDump.append([fileN, hashesList[index][0], hashesList[index][1], hashesList[index][2], hashesList[index][3], date, time])
                     else:
                         fileDump.append([fileN, hashesList[index][0], hashesList[index][1], hashesList[index][2], hashesList[index][3], date, time])
-
                 else:
                     print "File Not Present"
                     fsp = FileSplitter()
                     fsp.doWork(fileN, 'split')
                     hashes = computeHash(fileN)
-                    filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                    filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3],"add", date, time])
                     fileDump.append([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
                     removeSplittedFiles(fileN)
 
+            ## Get filename that need to be delete from SuperNode
+            fileNotNeeded = Diff(fileNameList, newFileNameList)
+            print  "--------------------------------"
+            print fileNotNeeded
+            print  "--------------------------------"
+            for names in fileNotNeeded:
+                filewriter.writerow([names,'0','0','0','0',"delete",'0','0'])
     fileContents = dumpContent('listFiles.csv')
     print fileContents
 
     os.remove('listFiles.csv')
-
+    # print "--> printing file Dump <--"
+    # print fileDump
     with open('listFiles.csv', 'wb') as csvfile:
         filewriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
         for i in fileDump:
-            # print i
             filewriter.writerow(i)
 
     # sending csv file to supernode
@@ -364,7 +392,7 @@ def listFiles():
     p.connect((str(TCP_IP), TCP_PORT))
     p.send(msg)
     p.close()
-    print "me tera baap hu BRO!!!!"
+    print "__Updated File List Sent__"
     return
 
 if __name__ == '__main__':
@@ -372,8 +400,8 @@ if __name__ == '__main__':
     superNodeAssign()
     #For Checking Node Status
 
-    # alive = threading.Thread(target = aliveChecker, name = 'alive')
-    # alive.start()
+    alive = threading.Thread(target = aliveChecker, name = 'alive')
+    alive.start()
 
 
     #for file sharing between sender and receiver

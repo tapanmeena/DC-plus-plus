@@ -1,3 +1,8 @@
+#livestatus port number : 12121
+#broadcasting port number : 44444
+# addFile() sharing port : 9005
+# supernode to supernode communication PORT : 9999
+
 import socket
 from threading import Thread
 from SocketServer import ThreadingMixIn
@@ -7,7 +12,6 @@ TCP_PORT = 9001
 BUFFER_SIZE = 1024
 
 class ClientThread(Thread):
-
     def __init__(self,ip,port,sock):
         Thread.__init__(self)
         self.ip = ip

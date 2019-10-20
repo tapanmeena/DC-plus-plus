@@ -107,7 +107,33 @@ import subprocess
 #     timeStamp = str(item[0]) + str(item[1]) + str(item[2])
 #     fileName = str(item[3])
 #     print fileName
-import os
-filename = "abcd"
-command = "rm "+str(filename)+"-*"
-os.system(command)
+# import os
+# filename = "abcd"
+# command = "rm "+str(filename)+"-*"
+# os.system(command)
+supernodeIPList = ['10.196.7.181']
+class Node:
+    def __init__(self, IPAddr, liveStatus) :
+        self.IPAddr = IPAddr
+        self.liveStatus = liveStatus
+        self.fileMap = {}
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+        return self.IPAddr == other.IPAddr
+
+class File: 
+    def __init__(self, name, h1, h2, h3, h4):
+        self.name = name`
+        self.h1 = h1
+        self.h2 = h2
+        self.h3 = h3
+        self.h4 = h4
+
+# containing objects of Node
+childNodes = {} #{IPAddr->Node}
+IPAddr = '10.196.7.181'
+childNodes[IPAddr].fileMap['1'] = File('1', '2', '3', '4', '5')
+childNodes[IPAddr].fileMap['2'] = File('2', '2', '3', '4', '5')
+childNodes[IPAddr].fileMap['3'] = File('3', '2', '3', '4', '5')
