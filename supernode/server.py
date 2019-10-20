@@ -98,12 +98,16 @@ import subprocess
 #     print Hash[0]
 #     hashList.append(Hash[0])
 # print(hashList)
-bashCommand = "ls -l | awk '{print $6, $7, $8, $9 }'"
-fileList = subprocess.check_output(['bash','-c', bashCommand])
-fileList = fileList.split('\n')
-numFiles = len(fileList)
-for i in range(1, numFiles-1):
-    item = fileList[i].split(' ')
-    timeStamp = str(item[0]) + str(item[1]) + str(item[2])
-    fileName = str(item[3])
-    print fileName
+# bashCommand = "ls -l | awk '{print $6, $7, $8, $9 }'"
+# fileList = subprocess.check_output(['bash','-c', bashCommand])
+# fileList = fileList.split('\n')
+# numFiles = len(fileList)
+# for i in range(1, numFiles-1):
+#     item = fileList[i].split(' ')
+#     timeStamp = str(item[0]) + str(item[1]) + str(item[2])
+#     fileName = str(item[3])
+#     print fileName
+import os
+filename = "abcd"
+command = "rm "+str(filename)+"-*"
+os.system(command)

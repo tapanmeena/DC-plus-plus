@@ -246,33 +246,113 @@ def dumpContent(filename):
 
     return fileContent
 
+def removeSplittedFiles(filename):
+    command = "rm "+str(filename)+"-*"
+    os.system(command)
+
 def listFiles():
     filename = 'listFiles.csv'
+    fileDump = []
     fileExist = False
     if(os.path.exists(filename)):
         fileExist = True
 
+    bashCommand = "ls -l | awk '{print $6, $7, $8, $9}'"
+    fileList = subprocess.check_output(['bash','-c', bashCommand])
+    fileList = fileList.split('\n')
+    numFiles = len(fileList)
+
     if not fileExist:
-        bashCommand = "ls -l | awk '{print $6, $7, $8, $9}'"
-        fileList = subprocess.check_output(['bash','-c', bashCommand])
-        fileList = fileList.split('\n')
-        numFiles = len(fileList)
         with open(filename, 'wb') as csvfile:
             filewriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             for i in range(1, numFiles-1):
                 item = fileList[i].split(' ')
-                timeStamp = str(item[0]) + str(item[1]) + str(item[2])
+                date = str(item[0]) + str(item[1])
+                time =  str(item[2])
                 fileName = str(item[3])
                 fsp = FileSplitter()
                 fsp.doWork(fileName, 'split')
                 hashes = computeHash(fileName)
-                print hashes
-                filewriter.writerow([fileName, hashes[0], hashes[1], hashes[2], hashes[3], timeStamp])
+
+                removeSplittedFiles(fileName)
+                # print hashes
+                filewriter.writerow([fileName, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
     else:
-        print("in else statement beta")    
+        print("-------> If List Files Exist <-------")
+        originalFileContent = dumpContent(filename)
+        # fileDump = []
+        print originalFileContent
+        os.remove('listFiles.csv')
+        fileNameList = []
+        timeStampList = []
+        dateStampList = []
+        hashesList = []
+        with open(filename, 'wb') as csvfile:
+            filewriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+
+            for fileN in originalFileContent:
+                fileNameList.append(fileN[0])
+                hashesList.append([fileN[1], fileN[2], fileN[3], fileN[4]])
+                dateStampList.append(fileN[5])
+                timeStampList.append(fileN[6])
+
+            for i in range(1,numFiles-1):
+                item = fileList[i].split(' ')
+                date = str(item[0]) + str(item[1])
+                time = str(item[2])
+                fileN = str(item[3])
+
+                #check if file exist and its time stamp with recorded LOG
+                if(fileN in fileNameList):
+                    index = fileNameList.index(fileN)
+                    #checking if timestamp are same or not
+                    print "###############################"
+                    print "File Name :" + fileN
+                    
+                    if dateStampList[index] < date:
+                        print dateStampList[index] + date
+                        # print "gandu"
+                        fsp = FileSplitter()
+                        fsp.doWork(fileN, 'split')
+                        hashes = computeHash(fileN)
+                        filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                        fileDump.append([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                        removeSplittedFiles(fileN)
+
+                    elif dateStampList[index] == date:
+                        if timeStampList[index] < time:
+                            print timeStampList[index] + time
+                            fsp = FileSplitter()
+                            fsp.doWork(fileN, 'split')
+                            hashes = computeHash(fileN)
+                            filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                            fileDump.append([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                            removeSplittedFiles(fileN)
+                        else:
+                            fileDump.append([fileN, hashesList[index][0], hashesList[index][1], hashesList[index][2], hashesList[index][3], date, time])
+                    else:
+                        fileDump.append([fileN, hashesList[index][0], hashesList[index][1], hashesList[index][2], hashesList[index][3], date, time])
+
+                else:
+                    print "File Not Present"
+                    fsp = FileSplitter()
+                    fsp.doWork(fileN, 'split')
+                    hashes = computeHash(fileN)
+                    filewriter.writerow([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                    fileDump.append([fileN, hashes[0], hashes[1], hashes[2], hashes[3], date, time])
+                    removeSplittedFiles(fileN)
 
     fileContents = dumpContent('listFiles.csv')
     print fileContents
+
+    os.remove('listFiles.csv')
+
+    with open('listFiles.csv', 'wb') as csvfile:
+        filewriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for i in fileDump:
+            # print i
+            filewriter.writerow(i)
+
     # sending csv file to supernode
     msg = pickle.dumps(fileContents)
     TCP_IP = str(ipAddr)
@@ -291,9 +371,16 @@ if __name__ == '__main__':
     #for Initial SuperNode assigning
     superNodeAssign()
     #For Checking Node Status
-    alive = threading.Thread(target = aliveChecker, name = 'alive')
-    alive.start()
+
+    # alive = threading.Thread(target = aliveChecker, name = 'alive')
+    # alive.start()
 
 
     #for file sharing between sender and receiver
     # sharing()
+
+
+
+############
+#TODO TIME STAMP COMPARISION IN SEND NEW FILES TO SUPERNODE
+############

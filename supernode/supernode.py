@@ -9,33 +9,27 @@ import os
 import time
 import pickle
 
-nFiles = 0
 class Node:
     def __init__(self, IPAddr, liveStatus) :
         self.IPAddr = IPAddr
         self.liveStatus = liveStatus
+        self.fileMap = {}
     def __eq__(self, other):
         if not isinstance(other, Node):
             # don't attempt to compare against unrelated types
             return NotImplemented
-        return self.IPAddr == other.IPAddr and self.liveStatus == other.liveStatus
+        return self.IPAddr == other.IPAddr
 
 class File: 
-    def __init__(self, name, h1, h2, h3, h4, liveStatus, IPAddr):
-        self.id = nFiles
+    def __init__(self, name, h1, h2, h3, h4):
         self.name = name
         self.h1 = h1
         self.h2 = h2
         self.h3 = h3
         self.h4 = h4
-        self.liveStatus = liveStatus
-        self.IPAddr = IPAddr
-        fileMap[id] = self
-        nFiles += 1 
 
 # containing objects of Node
-childNodes = []
-fileMap = {}
+childNodes = {} #{IPAddr->Node}
 
 def addFiles(IPAddr):
     TCP_IP = IPAddr
@@ -52,15 +46,21 @@ def addFiles(IPAddr):
         msg = conn.recv(1024)
         data = pickle.loads(msg)
         print "----------"
+        # x[0] -> file name
+        # x[1]-x[4]-> file hashes
         for x in data:
             print x
-        print "----------" 
+            childNodes[IPAddr].fileMap[x[0]] = File(x[0], x[1], x[2], x[3], x[4])
+        print "----------"
+
+        x = childNodes[IPAddr]
+        for y in x.fileMap:
+            print(x.fileMap[y].name)                     
     except socket.timeout as e:
         print "files addition socket timeout : " + TCP_IP
         tcpsock.close()
         return
     tcpsock.close()
-
 
 def assignSuperNode():
     # accept requests to become superNode
@@ -74,13 +74,14 @@ def assignSuperNode():
         data, addr = sNode.recvfrom(1024)
         if data != '':
             sNode.sendto(IPAddr, addr)
-            if Node(addr[0], False) in childNodes:
-                childNodes[childNodes.index(Node(addr[0], False))].liveStatus = True
+            # if Node(addr[0], False) in childNodes:
+            if childNodes.get(addr[0]) is not None:
+                childNodes[addr[0]].liveStatus = True
                 print('----------dead to alive-------')
                 #TODO
                 addFiles(addr[0])
             else:
-                childNodes.append(Node(addr[0], True))
+                childNodes[addr[0]]=(Node(addr[0], True))
                 print('------adding new node ----------')
                 #TODO 
                 addFiles(addr[0])
@@ -88,8 +89,9 @@ def assignSuperNode():
 def heartBeat():
     print 'Inside HeartBeat'
     while True:
-        # TCP_IP = "10.196.7.181"
-        for child in childNodes:
+        # TCP_IP = "10.196.700.181"
+        for x in childNodes:
+            child = childNodes[x]
             if(child.liveStatus):
                 print "Child IP : "+child.IPAddr
                 TCP_IP = child.IPAddr
