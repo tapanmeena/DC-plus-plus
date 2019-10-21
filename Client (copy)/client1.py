@@ -364,7 +364,7 @@ def sharing(ipList, requestedFile):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((TCP_IP, TCP_PORT))
     # filename = raw_input("Give File Name : ")
-    fileName = str(requestedFile)
+    filename = str(requestedFile)
     s.send(filename)
     with open(filename, 'wb') as f:
         print 'file opened'
@@ -550,8 +550,8 @@ if __name__ == '__main__':
     superNodeAssign()
     #For Checking Node Status
 
-    serverT = Thread(target = server, name='serverT')
-    serverT.start()
+    # serverT = Thread(target = server, name='serverT')
+    # serverT.start()
 
     alive = Thread(target = aliveChecker, name = 'alive')
     alive.start()
