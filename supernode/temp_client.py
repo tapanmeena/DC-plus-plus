@@ -308,7 +308,7 @@ def superNodeAssign():
             print "--->",addr[0],"<--"
             IP_supernode = IP_supernode.strip('\n')
             time.sleep(1)
-
+            
             sendMsgUDP(8090, addr[0], "ACK") #sedning ACK
 
             break
@@ -533,7 +533,7 @@ def listFiles():
     print "Message ---> "+msg
     TCP_IP = IP_supernode
     TCP_PORT = 44445
-    BUFFER_SIZE = 5000
+    BUFFER_SIZE = 5096
     print "TCP->" + TCP_IP,"<--"
 
     p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

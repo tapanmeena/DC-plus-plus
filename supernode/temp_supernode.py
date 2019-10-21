@@ -7,8 +7,6 @@
 # reqHandler : 9090
 # add superNode broadcast req : 11000
 # superNode file update info : 11001
-# ACK to supernode for assigning SuperNode 8090
-# superNode to supernode file info sharing(first time only) : 11002
 
 import socket
 import subprocess
@@ -20,7 +18,6 @@ from collections import defaultdict
 
 #PORT Mappings 
 PORT_updateSuperNode = 11001
-PORT_superNodeFileCache = 11002
 
 
 myIPAddr = ""
@@ -37,20 +34,9 @@ def myIP():
 
 # ---------------------Inter Super node communication---------------------
 
-def recvFileCache():
-    print ("----inside recv file cache---")
-    global fileCache
-    tempCache = recvObj(PORT_superNodeFileCache, 10)
-    if len(fileCache)==0 and tempCache is not None:
-        print tempCache
-        fileCache = tempCache
-
-def sendFileCache(ipAddr):
-    sendObj(PORT_superNodeFileCache, ipAddr, fileCache)
-
 # run on a thread to alter the supernode list
 def setSuperNodes():
-    getSuperNodes1()
+    getSuperNodes()
     # accept requests to become superNode
     sNode = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
     sNode.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -61,13 +47,11 @@ def setSuperNodes():
         if data != '':
             if addr[0] not in superNodeList and addr[0]!= myIPAddr:
                 print "New Connected SuperNode :-"+addr[0]+"-"
-                getSuperNodes2(addr[0])
-                # sendFileCache(addr[0])
-                # recvFileCache()
+                getSuperNodes()
                 superNodeList.append(addr[0])
 
 # send a broadcast message once to add your ip to all other supernodes.
-def getSuperNodes1():
+def getSuperNodes():
     broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
@@ -80,47 +64,11 @@ def getSuperNodes1():
 
     broadcast.sendto(message, ('<broadcast>', 11000))
     broadcast.close()
-    sNode = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-    sNode.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sNode.bind(("", 11000))
-    sNode.settimeout(2)
-    try:
-        data, addr = sNode.recvfrom(5096)
-        if data != '':
-            if addr[0] not in superNodeList and addr[0]!= myIPAddr:
-                print "New Connected SuperNode2 :-"+addr[0]+"-"
-                superNodeList.append(addr[0])
-    except socket.error, exc:
-        print "Some Error in Supernode 1",exc
-    sNode.close()
-    recvFileCache()
-    print("________________cache after rec cache________________")
-    print(fileCache)
-    print("______________________________________________________")
-
-def getSuperNodes2(addr):
-    broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
-    # Set a timeout so the socket does not block
-    # indefinitely when trying to receive data.
-    broadcast.settimeout(5)
-    broadcast.bind(("", 44444))
-
-    message = "I'm a superNode"
-
-    broadcast.sendto(message, ('<broadcast>', 11000))
-    broadcast.close()
-    time.sleep(4)
-    sendFileCache(addr)
-    print("------------------cache after send file------------")
-    print(fileCache)
-    print("________________________________________________")
 
 # continuously listen for updates regarding the files meta information
 # maintain same set of file information across all superNodes.
 def getUpdates():
-    BUFFER_SIZE = 5096
+    BUFFER_SIZE = 
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     print("---------in get Update s->>>>>>>>"+str(myIPAddr)+"<<<<<<<,,")
@@ -142,13 +90,13 @@ def getUpdates():
             for x in msg:
                 print x
                 if(x[5] == "add"):
-                    print "adding files -->"+ myIPAddr +"-->fileName-->"+ x[0]
-                    childNodes[myIPAddr].fileMap[x[0]] = File(x[0], x[1], x[2], x[3], x[4])
-                    fileCache[x[0]].append(myIPAddr)
+                    print "adding files -->"+ IPAddr +"-->fileName-->"+ x[0]
+                    childNodes[IPAddr].fileMap[x[0]] = File(x[0], x[1], x[2], x[3], x[4])
+                    fileCache[x[0]].append(IPAddr)
                 elif(x[5] == "delete"):
-                    print "deleting files -->"+ myIPAddr+"-->filename-->"+ x[0]
-                    del(childNodes[myIPAddr].fileMap[x[0]])
-                    fileCache[x[0]].remove(myIPAddr)
+                    print "deleting files -->"+ IPAddr+"-->filename-->"+ x[0]
+                    del(childNodes[IPAddr].fileMap[x[0]])
+                    fileCache[x[0]].remove(IPAddr)
                     if(len(fileCache[x[0]])==0):
                         del(fileCache[x[0]])
         conn.close()
@@ -184,14 +132,14 @@ class File:
         self.h4 = h4
 
 # recv an object via TCP socket
-def recvObj(port, tout = 4):
+def recvObj(port):
     TCP_IP = myIPAddr
     TCP_PORT = port
     BUFFER_SIZE  = 5096
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
     tcpsock.bind((TCP_IP, TCP_PORT))
-    tcpsock.settimeout(tout) 
+    tcpsock.settimeout(10) 
     try:
         tcpsock.listen(5)
         (conn, (ip, port)) = tcpsock.accept()
@@ -199,6 +147,7 @@ def recvObj(port, tout = 4):
         data = pickle.loads(msg)
         tcpsock.close()
         return data 
+
     except socket.timeout as e:
         print "files addition socket timeout : " + TCP_IP
         tcpsock.close()
@@ -269,7 +218,7 @@ def handleFiles(IPAddr):
         (conn, (ip, port)) = tcpsock.accept()
         msg = conn.recv(5096)
         # print ("____________________")
-        print msg
+        # print msg
         # print ("____________________")
 
         data = pickle.loads(msg)
@@ -281,12 +230,6 @@ def handleFiles(IPAddr):
             if(x[5] == "add"):
                 print "adding files -->"+ IPAddr +"-->fileName-->"+ x[0]
                 childNodes[IPAddr].fileMap[x[0]] = File(x[0], x[1], x[2], x[3], x[4])
-                print("_____________debugging ki ma_________________________")
-                print("filecahce->", fileCache)
-                print("x[0]", x[0])
-                print("IPADDR->", IPAddr)
-                print(fileCache[x[0]])
-                print("_______________________________________________________")
                 fileCache[x[0]].append(IPAddr)
             elif(x[5] == "delete"):
                 print "deleting files -->"+ IPAddr+"-->filename-->"+ x[0]
