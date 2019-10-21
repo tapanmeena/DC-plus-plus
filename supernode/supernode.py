@@ -21,7 +21,7 @@ from collections import defaultdict
 #PORT Mappings 
 PORT_updateSuperNode = 11001
 PORT_superNodeFileCache = 11002
-
+PORT_sync = 9191
 
 myIPAddr = ""
 # containing objects of Node
@@ -62,8 +62,6 @@ def setSuperNodes():
             if addr[0] not in superNodeList and addr[0]!= myIPAddr:
                 print "New Connected SuperNode :-"+addr[0]+"-"
                 getSuperNodes2(addr[0])
-                # sendFileCache(addr[0])
-                # recvFileCache()
                 superNodeList.append(addr[0])
 
 # send a broadcast message once to add your ip to all other supernodes.
@@ -84,8 +82,10 @@ def getSuperNodes1():
     sNode.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sNode.bind(("", 11000))
     sNode.settimeout(2)
+    tempaddr = ""
     try:
         data, addr = sNode.recvfrom(5096)
+        tempaddr = addr[0]
         if data != '':
             if addr[0] not in superNodeList and addr[0]!= myIPAddr:
                 print "New Connected SuperNode2 :-"+addr[0]+"-"
@@ -93,7 +93,22 @@ def getSuperNodes1():
     except socket.error, exc:
         print "Some Error in Supernode 1",exc
     sNode.close()
+
+    #sync messages
+
+    TCP_IP = tempaddr
+    TCP_PORT = PORT_sync
+    BUFFER_SIZE = 5096
+    p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        p.connect((str(TCP_IP), TCP_PORT))
+        p.send("hola, amoebas!")
+        p.close()
+    except socket.error , exc:
+        print "Error Caught : ",exc
+
     recvFileCache()
+    
     print("________________cache after rec cache________________")
     print(fileCache)
     print("______________________________________________________")
@@ -111,7 +126,29 @@ def getSuperNodes2(addr):
 
     broadcast.sendto(message, ('<broadcast>', 11000))
     broadcast.close()
-    time.sleep(4)
+    # time.sleep(4)
+    #sync messages
+    
+        
+    TCP_IP = myIPAddr
+    TCP_PORT = PORT_sync
+    BUFFER_SIZE  = 5096
+    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+    tcpsock.bind((TCP_IP, TCP_PORT))
+    # tcpsock.settimeout(tout) 
+    try:
+        tcpsock.listen(5)
+        (conn, (ip, port)) = tcpsock.accept()
+        msg = conn.recv(5096)
+        tcpsock.close()
+    except socket.error as e:
+        print "files addition socket timeout : " + TCP_IP
+        tcpsock.close()
+        return
+    tcpsock.close()
+
+
     sendFileCache(addr)
     print("------------------cache after send file------------")
     print(fileCache)
