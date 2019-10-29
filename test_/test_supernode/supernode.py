@@ -199,6 +199,7 @@ def sendUpdates(data):
         print("_____superNode fella->"+str(x)+"<_____")
         sendObj(PORT_updateSuperNode, x, data)
 
+
 # -------------------------end super node comm----------------------------
 class Node:
     def __init__(self, IPAddr, liveStatus) :
@@ -391,7 +392,6 @@ def assignSuperNode():
 def heartBeat():
     print 'Inside HeartBeat'
     isCheck = False
-    time.sleep(10)
     while True:
         # TCP_IP = "10.196.700.181"
         for x in list(childNodes):
@@ -401,22 +401,26 @@ def heartBeat():
                 TCP_IP = child.IPAddr
                 TCP_PORT = 12121
                 BUFFER_SIZE  = 5096
-
-                #convert object to serial stream  
-                msg = "You there???"
-                msg = pickle.dumps(msg)
-                
-                p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+                tcpsock.bind((myIPAddr, TCP_PORT))
+                tcpsock.settimeout(10)
+                isCheck = True
                 try:
-                    p.connect((TCP_IP, TCP_PORT))
-                    p.send(msg)
-                    p.close()
-                    print "Node is Alive :) " + TCP_IP
-                except socket.error , exc:
-                    print "Error Caught in live status : ",exc
-                    child.liveStatus = False
-                    print "Node is Dead:( ",TCP_IP
-        time.sleep(200)
+                    tcpsock.listen(5)
+                    print "Checking for Node Alive "+ TCP_IP
+                    (conn, (ip, port)) = tcpsock.accept()
+                    msg = conn.recv(5096)
+                except socket.timeout as e:
+                    # child.liveStatus = False
+                    # print "Node is Dead AF : " + TCP_IP
+                    tcpsock.close()
+                    continue
+                print "Node is Alive :) " + TCP_IP
+                tcpsock.close()
+        if isCheck:
+            time.sleep(300)
+            isCheck = False
 
 # def SupernodeToSupernode():
 #     supernodeIPList = ['10.196.7.181']

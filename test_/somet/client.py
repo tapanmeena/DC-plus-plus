@@ -1,4 +1,4 @@
-# aliveChecker port number : 12121
+# livestatus port number : 12121
 # broadcasting port number : 44444
 # addFile() sharing port : 44445
 # supernode to supernode communication PORT : 9999
@@ -14,10 +14,12 @@ from threading import Thread
 from SocketServer import ThreadingMixIn
 
 PORT_fileSharing = 9010
+PORT_filePre = 9111
+PORT_filePost = 9112
 
 IP_supernode = ''
 numChunks = 4
-BUFFER_SIZE = 5096
+BUFFER_SIZE = 1024
 
 myIPaddr = ""
 
@@ -26,8 +28,35 @@ def myIP():
     bashCommand = "hostname -I | awk '{print $1}'"
     myIPaddr = subprocess.check_output(['bash','-c', bashCommand])
     myIPaddr = myIPaddr.split('\n')
+    myIPaddr = myIPaddr[0]
 
 #--------------------Server-------------------------------
+# def server():
+#     global PORT_fileSharing
+#     print "in server--> ",myIPaddr, PORT_fileSharing
+
+#     BUFFER_SIZE = 1024
+#     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#     tcpsock.bind((myIPaddr, PORT_fileSharing))
+#     threads = []
+
+#     while True:
+#         tcpsock.listen(5)
+#         print "Waiting for incoming connections..."
+#         (conn, (ip,port)) = tcpsock.accept()
+#         print 'Got connection from ', (ip,port)
+#         newthread = ClientThread(ip,port,conn)
+#         newthread.start()
+#         threads.append(newthread)
+
+#     for t in threads:
+#         t.join()
+
+#==================== server ends ========================
+
+# --------------file splitting utility--------------------
+
 class ClientThread(Thread):
     def __init__(self,ip,port,sock):
         Thread.__init__(self)
@@ -48,39 +77,10 @@ class ClientThread(Thread):
                 # print('Sent ',repr(l))
                 l = f.read(BUFFER_SIZE)
             if not l:
+                # postTrans(filename)
                 f.close()
                 self.sock.close()
                 break
-
-def server():
-    global PORT_fileSharing
-    print "haramkhor ",PORT_fileSharing
-
-    # bashCommand = "hostname -I | awk '{print $1}'"
-    # IPAddr = subprocess.check_output(['bash','-c', bashCommand])
-    # IPAddr = IPAddr.strip("\n")
-
-    BUFFER_SIZE = 5096
-    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    tcpsock.bind((myIPaddr, PORT_fileSharing))
-    threads = []
-
-    while True:
-        tcpsock.listen(5)
-        print "Waiting for incoming connections..."
-        (conn, (ip,port)) = tcpsock.accept()
-        print 'Got connection from ', (ip,port)
-        newthread = ClientThread(ip,port,conn)
-        newthread.start()
-        threads.append(newthread)
-
-    for t in threads:
-        t.join()
-
-#==================== server ends ========================
-
-# --------------file splitting utility--------------------
 
 class FileSplitterException(Exception):
     def __init__(self, value):
@@ -97,7 +97,7 @@ class FileSplitter:
         # cache filename
         self.__filename = ''
         # number of equal sized chunks
-        self.__numchunks = 4
+        self.__numchunks = numChunks
         # Size of each chunk
         self.__chunksize = 0
         # Optional postfix string for the chunk filename
@@ -108,12 +108,14 @@ class FileSplitter:
     def doWork(self, fileName, action):
         self.__numchunks = int(numChunks)
         self.__filename = fileName
+        print("---------action------->", action)
         if not self.__filename:
             sys.exit("Error: filename not given")
             return
         if action == 'split':
             self.split()
         elif action =='join':
+            print "in join portion", fileName
             self.combine()
         
     def split(self):
@@ -226,7 +228,7 @@ class FileSplitter:
 def recvObj(port):
     TCP_IP = myIPaddr
     TCP_PORT = port
-    BUFFER_SIZE  = 5096
+    BUFFER_SIZE  = 1024
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
     tcpsock.bind((TCP_IP, TCP_PORT))
@@ -234,7 +236,7 @@ def recvObj(port):
     try:
         tcpsock.listen(5)
         (conn, (ip, port)) = tcpsock.accept()
-        msg = conn.recv(5096)
+        msg = conn.recv(1024)
         data = pickle.loads(msg)
         tcpsock.close()
         return data 
@@ -249,7 +251,7 @@ def recvObj(port):
 def sendObj(port, IPAddr, obj):
     TCP_IP = str(IPAddr)
     TCP_PORT = port
-    BUFFER_SIZE = 5096
+    BUFFER_SIZE = 1024
 
     #convert object to serial stream  
     msg = pickle.dumps(obj)
@@ -263,28 +265,25 @@ def sendObj(port, IPAddr, obj):
         print "Error Caught : ",exc
 
 def aliveChecker():
-    global IP_supernode
-    # time.sleep(8)
-    TCP_IP = myIPaddr
-    TCP_PORT = 12121
-    BUFFER_SIZE = 5096
-    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-    tcpsock.bind((TCP_IP, TCP_PORT))
+    time.sleep(8)
     while True:
-        tcpsock.settimeout(400)
+        TCP_IP = myIPaddr
+        TCP_PORT = 12121
+        BUFFER_SIZE = 1024
+        # print "TCP->" + TCP_IP
+
+        p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            print "Listening for Live Status"
-            tcpsock.listen(5)
-            (conn, (ip, port)) = tcpsock.accept()
-            # print "---",ip,"---"
-            msg = conn.recv(5096)
-            data = pickle.loads(msg)
-            print "Super Node is Alive ", data
-        except socket.timeout as e:
-            print "Alive Checker socket timeout : " + TCP_IP
-            print "Supernode ",IP_supernode," is Dead :("
-            superNodeAssign()
+            p.connect((TCP_IP, TCP_PORT))
+            msg = "Alive"
+            print msg
+            p.send(msg)
+            p.close()
+            print "I'm Alive BRO!!!"
+            time.sleep(100)
+        except socket.error , exc:
+            # print "Error Caught : ",exc
+            time.sleep(20)
 
 def superNodeAssign():
     global IP_supernode
@@ -303,7 +302,7 @@ def superNodeAssign():
     while True:
         broadcast.sendto(message, ('<broadcast>', 37020))
         # print("message sent!")
-        data,addr = broadcast.recvfrom(5096)
+        data,addr = broadcast.recvfrom(1024)
         broadcast.close()
         if data is not None:
             IP_supernode = str(data)
@@ -311,7 +310,7 @@ def superNodeAssign():
             print "--->",addr[0],"<--"
             IP_supernode = IP_supernode.strip('\n')
             time.sleep(1)
-
+            
             sendMsgUDP(8090, addr[0], "ACK") #sedning ACK
 
             break
@@ -355,21 +354,70 @@ def fileRequest():
             # exit(1001)
             #another shit
         elif option == "R":
-            sendMsgUDP(9090, IP_supernode, 'showFiles')
-            fileList = recvObj(9001)
             #go back to main list
             tempList = fileList
             #do whatever you want to do
         else:
             print "\n\n\t\t \033[1m \033[91m Invalid Character Entered.. Try Again \033[0m"
 
-def sharing(ipList, requestedFile):
+def preTrans():
+    #break the file into numchunks
+    global myIPaddr, PORT_filePre
+
+    BUFFER_SIZE = 1024
+    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    print "------ in pre trans ---->????", myIPaddr, PORT_filePre
+
+    tcpsock.bind((myIPaddr, PORT_filePre))
+ 
+    while True:
+        tcpsock.listen(5)
+        print "Waiting for incoming connections..PRETRANS."
+        (conn, (ip,port)) = tcpsock.accept()
+        print 'Got connection from ', (ip,port)
+        
+        data = conn.recv(1024)
+        msg = pickle.loads(data)
+
+        print "pretrans file ->", msg
+        fsp = FileSplitter()
+        if(msg !=''):
+            fsp.doWork(msg, 'split')
+
+def postTrans():
+    #delete the additional temporary chunks created for transfer
+
+    global myIPaddr, PORT_filePost
+
+    BUFFER_SIZE = 1024
+    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    print "------ in post trans ---->????", myIPaddr, PORT_filePost
+    tcpsock.bind((myIPaddr, PORT_filePost))
+ 
+    while True:
+        tcpsock.listen(5)
+        print "Waiting for incoming connections..."
+        (conn, (ip,port)) = tcpsock.accept()
+        print 'Got connection from ', (ip,port)
+        data = conn.recv(1024)
+        msg = pickle.loads(data)
+
+        fsp = FileSplitter()
+        if(msg !=''):
+            for x in range(1, numChunks+1):
+                print("posttrnas", x)
+                bashCommand = "rm "+str(msg)+"-"+str(x)
+                myIPaddr = subprocess.check_output(['bash','-c', bashCommand])
+
+def sharing(ipList, requestedFile, port):
     if ipList is None:
         return
     #for sending filename and receiving File from server(sender)
     TCP_IP = ipList[0] #sender ip address
-    TCP_PORT = 9010
-    BUFFER_SIZE = 5096
+    TCP_PORT = port
+    BUFFER_SIZE = 1024
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((TCP_IP, TCP_PORT))
@@ -380,6 +428,7 @@ def sharing(ipList, requestedFile):
         while True:
             #print('receiving data...')
             data = s.recv(BUFFER_SIZE)
+            # print "-----id-->", id
             # print('data=%s', (data))
             if not data:
                 f.close()
@@ -538,7 +587,7 @@ def listFiles():
     print "Message ---> "+msg
     TCP_IP = IP_supernode
     TCP_PORT = 44445
-    BUFFER_SIZE = 5000
+    BUFFER_SIZE = 5096
     print "TCP->" + TCP_IP,"<--"
 
     p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -555,15 +604,26 @@ def sendMsgUDP(port, ip, msg):
     UDPClientSocket.close()
       
 if __name__ == '__main__':
+
+    myIP()
+
     #for Initial SuperNode assigning
     superNodeAssign()
     #For Checking Node Status
+
+    # serverT = Thread(target = server, name='serverT')
+    # serverT.start()
+
+
+    prepFileT = Thread(target = preTrans,name ='prepFileT')
+    postFileT = Thread(target = postTrans, name = 'postFileT')
+    prepFileT.start()    # serverT = Thread(target = server, name='serverT')
+    # serverT.start()
+
+    postFileT.start()
+
     alive = Thread(target = aliveChecker, name = 'alive')
     alive.start()
-
-    serverT = Thread(target = server, name='serverT')
-    serverT.start()
-
 
     while True:
         print("Press G to get Available File Names on Network")
@@ -571,7 +631,43 @@ if __name__ == '__main__':
         if inputedValue == 'G':
             sendMsgUDP(9090, IP_supernode, 'showFiles')
             ipList, requestedFile = fileRequest()
-            sharing(ipList, requestedFile)
+            
+            print "requested file_->", requestedFile
+
+            #split file into chunks for parallel transfer
+            sendObj(PORT_filePre, ipList[0], requestedFile)
+            time_start = time.time()
+
+            fst1 = Thread(target = sharing, args =(ipList, str(requestedFile)+'-1', 9010), name = 'fst1')
+            fst2 = Thread(target = sharing, args =(ipList, str(requestedFile)+'-2', 9010), name = 'fst2')
+            fst3 = Thread(target = sharing, args =(ipList, str(requestedFile)+'-3', 9010), name = 'fst3')
+            fst4 = Thread(target = sharing, args =(ipList, str(requestedFile)+'-4', 9010), name = 'fst4')
+
+            fst1.start()   
+            fst2.start()
+            fst3.start()
+            fst4.start()
+            
+            fst1.join()
+            fst2.join()
+            fst3.join()
+            fst4.join()
+            
+            fsp = FileSplitter()
+            fsp.doWork(requestedFile, 'join')
+
+            time_end = time.time()
+
+            print "multi-part time ->", time_end-time_start
+
+            # delete the temp chunks
+            # sendObj(PORT_filePost, ipList[0], requestedFile)
+
+           
+            
+           
+
+            # sharing(ipList, requestedFile, 9010)
         else:
             print "\n\n\t\t \033[1m \033[91m Invalid Character Entered.. Try Again \033[0m"
     #for file sharing between sender and receiver
