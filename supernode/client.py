@@ -4,7 +4,6 @@ import socket, pickle
 import time
 import threading
 import subprocess
-'''
 #for sending filename and receiving File from server(sender)
 TCP_IP = 'localhost' #sender ip address
 TCP_PORT = 9001
@@ -30,7 +29,6 @@ with open(filename, 'wb') as f:
 print('Successfully get the file')
 s.close()
 print('connection closed')
-'''
 '''
 TCP_IP = 'localhost'
 TCP_PORT = 12121    
@@ -185,62 +183,62 @@ while True:
 #             superNodeList.append(addr[0])
 #         print superNodeList
 
-bashCommand = "hostname -I | awk '{print $1}'"
-myIPAddr = subprocess.check_output(['bash','-c', bashCommand])
-myIPAddr = myIPAddr.split('\n')
-myIPAddr = myIPAddr[0]
-print "____"+str(myIPAddr)+"___"
+# bashCommand = "hostname -I | awk '{print $1}'"
+# myIPAddr = subprocess.check_output(['bash','-c', bashCommand])
+# myIPAddr = myIPAddr.split('\n')
+# myIPAddr = myIPAddr[0]
+# print "____"+str(myIPAddr)+"___"
 
-def recvObj(port):
-    TCP_IP = myIPAddr
-    TCP_PORT = port
-    BUFFER_SIZE  = 1024
-    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-    tcpsock.bind((TCP_IP, TCP_PORT))
-    tcpsock.settimeout(10)
-    try:
-        tcpsock.listen(5)
-        (conn, (ip, port)) = tcpsock.accept()
-        msg = conn.recv(1024)
-        data = pickle.loads(msg)
-        tcpsock.close()
-        return data 
+# def recvObj(port):
+#     TCP_IP = myIPAddr
+#     TCP_PORT = port
+#     BUFFER_SIZE  = 1024
+#     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+#     tcpsock.bind((TCP_IP, TCP_PORT))
+#     tcpsock.settimeout(10)
+#     try:
+#         tcpsock.listen(5)
+#         (conn, (ip, port)) = tcpsock.accept()
+#         msg = conn.recv(1024)
+#         data = pickle.loads(msg)
+#         tcpsock.close()
+#         return data 
 
-    except socket.timeout as e:
-        print "files addition socket timeout : " + TCP_IP
-        tcpsock.close()
-        return
-    tcpsock.close()
+#     except socket.timeout as e:
+#         print "files addition socket timeout : " + TCP_IP
+#         tcpsock.close()
+#         return
+#     tcpsock.close()
 
-#function to send an object from TCP sockets
-def sendObj(port, IPAddr, obj):
-    TCP_IP = str(IPAddr)
-    TCP_PORT = port
-    BUFFER_SIZE = 1024
+# #function to send an object from TCP sockets
+# def sendObj(port, IPAddr, obj):
+#     TCP_IP = str(IPAddr)
+#     TCP_PORT = port
+#     BUFFER_SIZE = 1024
 
-    #convert object to serial stream  
-    msg = pickle.dumps(obj)
+#     #convert object to serial stream  
+#     msg = pickle.dumps(obj)
     
-    p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        p.connect((str(TCP_IP), TCP_PORT))
-        p.send(msg)
-        p.close()
-    except socket.error , exc:
-        print "Error Caught : ",exc
+#     p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     try:
+#         p.connect((str(TCP_IP), TCP_PORT))
+#         p.send(msg)
+#         p.close()
+#     except socket.error , exc:
+#         print "Error Caught : ",exc
 
-def findFile(IPAddr):
-    filename = recvObj(9002)
-    print "Filename  :",filename
-    sendObj(9003, IPAddr, 'someshit')
+# def findFile(IPAddr):
+#     filename = recvObj(9002)
+#     print "Filename  :",filename
+#     sendObj(9003, IPAddr, 'someshit')
 
-sNode = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-sNode.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-sNode.bind(("", 9090))
-# continuously listen for broadcast msgs
-data, addr = sNode.recvfrom(1024)
-findFile(addr[0])
+# sNode = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+# sNode.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+# sNode.bind(("", 9090))
+# # continuously listen for broadcast msgs
+# data, addr = sNode.recvfrom(1024)
+# findFile(addr[0])
 
 '''
 # broadcasting port number : 44444

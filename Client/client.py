@@ -40,13 +40,14 @@ class ClientThread(Thread):
         filename = self.sock.recv(BUFFER_SIZE)
         print "Filename Bitches : "+filename
         # filename='mytext.txt'
+        time.sleep(4)
         f = open(filename,'rb')
         while True:
-            l = f.read(BUFFER_SIZE)
+            l = f.read(640000)
             while (l):
                 self.sock.send(l)
                 # print('Sent ',repr(l))
-                l = f.read(BUFFER_SIZE)
+                l = f.read(640000)
             if not l:
                 f.close()
                 self.sock.close()
@@ -369,12 +370,13 @@ def sharing(ipList, requestedFile):
     #for sending filename and receiving File from server(sender)
     TCP_IP = ipList[0] #sender ip address
     TCP_PORT = 9010
-    BUFFER_SIZE = 5096
+    BUFFER_SIZE = 640000
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((TCP_IP, TCP_PORT))
     filename = str(requestedFile)
     s.send(filename)
+    start = time.time()
     with open(filename, 'wb') as f:
         print 'file opened'
         while True:
@@ -387,8 +389,9 @@ def sharing(ipList, requestedFile):
                 break
             # write data to a file
             f.write(data)
-
-    print('Successfully get the file')
+    end  = time.time()
+    print 'Successfully get the file'
+    print 'Time taken to Download file is : ',end-start
     s.close()
     print('connection closed')
 
