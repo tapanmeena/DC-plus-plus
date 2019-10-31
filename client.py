@@ -5,14 +5,14 @@ import time
 import threading
 import subprocess
 #for sending filename and receiving File from server(sender)
-TCP_IP = '10.196.8.90' #sender ip address
+TCP_IP = '10.250.1.93' #sender ip address
 TCP_PORT = 9001
 BUFFER_SIZE = 1024
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
-filename = "1.deb"
-# filename = raw_input("Give File Name : ")
+# filename = "1.deb"
+filename = raw_input("Give File Name : ")
 s.send(filename)
 # start 
 with open(filename, 'wb') as f:

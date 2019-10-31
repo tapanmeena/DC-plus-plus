@@ -2,7 +2,7 @@ import socket, time, subprocess,pickle
 from threading import Thread
 from SocketServer import ThreadingMixIn
 # '''
-TCP_IP = '10.196.8.85'
+TCP_IP = '10.250.1.93'
 TCP_PORT = 9001
 BUFFER_SIZE = 1024
 
