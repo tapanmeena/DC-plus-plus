@@ -1,4 +1,4 @@
-# aliveChecker port number : 12121
+# heartbeat port number : 12121
 # broadcasting port number : 44444
 # addFile() sharing port : 44445
 # supernode to supernode communication PORT : 9999
@@ -263,7 +263,7 @@ def sendObj(port, IPAddr, obj):
     except socket.error , exc:
         print "Error Caught : ",exc
 
-def aliveChecker():
+def heartbeat():
     global IP_supernode
     # time.sleep(8)
     TCP_IP = myIPaddr
@@ -273,7 +273,7 @@ def aliveChecker():
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
     tcpsock.bind((TCP_IP, TCP_PORT))
     while True:
-        tcpsock.settimeout(400)
+        tcpsock.settimeout(10)
         try:
             print "Listening for Live Status"
             tcpsock.listen(5)
@@ -282,6 +282,7 @@ def aliveChecker():
             msg = conn.recv(5096)
             data = pickle.loads(msg)
             print "Super Node is Alive ", data
+            listFiles()
         except socket.timeout as e:
             print "Alive Checker socket timeout : " + TCP_IP
             print "Supernode ",IP_supernode," is Dead :("
@@ -294,7 +295,7 @@ def superNodeAssign():
 
     # Set a timeout so the socket does not block
     # indefinitely when trying to receive data.
-    broadcast.settimeout(5)
+    # broadcast.settimeout(5)
     broadcast.bind(("", 44444))
 
     #to get it's own IP Address
@@ -420,7 +421,8 @@ def removeSplittedFiles(filename):
     os.system(command)
 
 def Diff(li1, li2):
-    li_dif = [i for i in li1 + li2 if i not in li1 or i not in li2] 
+    li_dif = list(set(li1) - set(li2))
+    # li_dif = [i for i in li1 + li2 if i not in li1 or i not in li2] 
     return li_dif
     # return (list(set(list1) - set(list2)))
 
@@ -519,6 +521,7 @@ def listFiles():
                     removeSplittedFiles(fileN)
 
             ## Get filename that need to be delete from SuperNode
+            # fileNotNeeded = Diff(newFileNameList,fileNameList)
             fileNotNeeded = Diff(fileNameList, newFileNameList)
             print  "--------------------------------"
             print fileNotNeeded
@@ -526,7 +529,7 @@ def listFiles():
             for names in fileNotNeeded:
                 filewriter.writerow([names,'0','0','0','0',"delete",'0','0'])
     fileContents = dumpContent('listFiles.csv')
-    print fileContents
+    print "->>>fileContents_-------->",fileContents
 
     os.remove('listFiles.csv')
     # print "--> printing file Dump <--"
@@ -561,7 +564,7 @@ if __name__ == '__main__':
     #for Initial SuperNode assigning
     superNodeAssign()
     #For Checking Node Status
-    alive = Thread(target = aliveChecker, name = 'alive')
+    alive = Thread(target = heartbeat, name = 'alive')
     alive.start()
 
     serverT = Thread(target = server, name='serverT')

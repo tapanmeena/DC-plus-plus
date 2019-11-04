@@ -421,6 +421,7 @@ def heartBeat():
     time.sleep(10)
     while True:
         # TCP_IP = "10.196.700.181"
+        print "---------------------------------",fileCache,"--------------------------"
         for x in list(childNodes):
             child = childNodes[x]
             if(child.liveStatus):
@@ -439,11 +440,12 @@ def heartBeat():
                     p.send(msg)
                     p.close()
                     print "Node is Alive :) " + TCP_IP
+                    handleFiles(TCP_IP)
                 except socket.error , exc:
                     print "Error Caught in live status : ",exc
                     child.liveStatus = False
                     print "Node is Dead:( ",TCP_IP
-        time.sleep(200)
+        time.sleep(5)
 
 # def SupernodeToSupernode():
 #     supernodeIPList = ['10.196.7.181']
