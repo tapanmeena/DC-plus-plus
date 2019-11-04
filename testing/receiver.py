@@ -12,8 +12,8 @@ BUFFER_SIZE = 1024
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
 # filename = "1.deb"
-#filename = raw_input("Give File Name : ")
-filename = "supernode.py"
+# filename = raw_input("Give File Name : ")
+filename = "client.py"
 s.send(filename)
 # start 
 with open(filename, 'wb') as f:

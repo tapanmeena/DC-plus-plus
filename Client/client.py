@@ -52,7 +52,7 @@ class ClientThread(Thread):
                 f.close()
                 self.sock.close()
                 break
-
+        sendObj(9090,IP_supernode,"downloadComplete")
 def server():
     global PORT_fileSharing
     print "haramkhor ",PORT_fileSharing
@@ -368,7 +368,7 @@ def sharing(ipList, requestedFile):
     if ipList is None:
         return
     #for sending filename and receiving File from server(sender)
-    TCP_IP = ipList[0] #sender ip address
+    TCP_IP = ipList #sender ip address
     TCP_PORT = 9010
     BUFFER_SIZE = 640000
 

@@ -274,7 +274,7 @@ def reqHandler():
         elif data == "findFile":
             print "Inside reqhandler Findfile :",addr[0]
             findFile(addr[0])
-        elif data == "downloadComplete":
+        elif data == "downloadComplete"
             print "Download Complete"
             transfer_done(addr[0])
 
@@ -295,20 +295,12 @@ def findFile(IPAddr):
 
 # load balancer, finds the IP addr with the min no of live requests
 def loadBal(filename):
-    maximum = 10000
+    minimum = -1
     resIP = ""
-    print "in load bal"
     for x in fileCache[filename]:
-        print "--------------"
-        print x
-        print childNodes[x].count
-        print "--------------"
-        
-        if(childNodes[x].count<maximum):
-            resIP = childNodes[x].IPAddr
-            minimum = childNodes[x].count
-    print resIP
-    print childNodes[resIP]
+        if(childNodes[x].count<minimum):
+            resIP = x.IPAddr
+            minimum = x.count
     childNodes[resIP].count+=1
     return resIP
 
