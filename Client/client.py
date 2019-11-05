@@ -34,11 +34,11 @@ class ClientThread(Thread):
         self.ip = ip
         self.port = port
         self.sock = sock
-        print " New thread started for "+ip+":"+str(port)
+        # print " New thread started for "+ip+":"+str(port)
 
     def run(self):
         filename = self.sock.recv(BUFFER_SIZE)
-        print "Filename Bitches : "+filename
+        # print "Filename Bitches : "+filename
         # filename='mytext.txt'
         time.sleep(4)
         f = open(filename,'rb')
@@ -55,7 +55,7 @@ class ClientThread(Thread):
         sendObj(9090,IP_supernode,"downloadComplete")
 def server():
     global PORT_fileSharing
-    print "haramkhor ",PORT_fileSharing
+    # print "haramkhor ",PORT_fileSharing
 
     # bashCommand = "hostname -I | awk '{print $1}'"
     # IPAddr = subprocess.check_output(['bash','-c', bashCommand])
@@ -69,7 +69,7 @@ def server():
 
     while True:
         tcpsock.listen(5)
-        print "Waiting for incoming connections..."
+        # print "Waiting for incoming connections..."
         (conn, (ip,port)) = tcpsock.accept()
         print 'Got connection from ', (ip,port)
         newthread = ClientThread(ip,port,conn)
@@ -121,8 +121,8 @@ class FileSplitter:
         """ Split the file and save chunks
         to separate files """
 
-        print 'Splitting file', self.__filename
-        print 'Number of chunks', self.__numchunks, '\n'
+        # print 'Splitting file', self.__filename
+        # print 'Number of chunks', self.__numchunks, '\n'
         
         try:
             f = open(self.__filename, 'rb')
@@ -147,7 +147,7 @@ class FileSplitter:
                 chunksz = fsize - total_bytes
 
             try:
-                print 'Writing file',chunkfilename
+                # print 'Writing file',chunkfilename
                 data = f.read(chunksz)
                 total_bytes += len(data)
                 chunkf = file(chunkfilename, 'wb')
@@ -160,7 +160,7 @@ class FileSplitter:
                 print e
                 break
 
-        print 'Done.'
+        # print 'Done.'
 
     def sort_index(self, f1, f2):
 
@@ -179,7 +179,7 @@ class FileSplitter:
 
         import re
         
-        print 'Creating file', self.__filename
+        # print 'Creating file', self.__filename
         
         bname = (os.path.split(self.__filename))[1]
         bname2 = bname
@@ -199,14 +199,14 @@ class FileSplitter:
                 chunkfiles.append(f)
 
 
-        print 'Number of chunks', len(chunkfiles), '\n'
+        # print 'Number of chunks', len(chunkfiles), '\n'
         chunkfiles.sort(self.sort_index)
 
         data=''
         for f in chunkfiles:
 
             try:
-                print 'Appending chunk', os.path.join(".", f)
+                # print 'Appending chunk', os.path.join(".", f)
                 data += open(f, 'rb').read()
             except (OSError, IOError, EOFError), e:
                 print e
@@ -219,7 +219,7 @@ class FileSplitter:
         except (OSError, IOError, EOFError), e:
             raise FileSplitterException, str(e)
 
-        print 'Wrote file', bname
+        # print 'Wrote file', bname
 
 #--------------------------------------------------------- 
 
@@ -230,9 +230,9 @@ def recvObj(port):
     BUFFER_SIZE  = 5096
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-    tcpsock.bind((TCP_IP, TCP_PORT))
     tcpsock.settimeout(10)
     try:
+        tcpsock.bind((TCP_IP, TCP_PORT))
         tcpsock.listen(5)
         (conn, (ip, port)) = tcpsock.accept()
         msg = conn.recv(5096)
@@ -241,7 +241,7 @@ def recvObj(port):
         return data 
 
     except socket.timeout as e:
-        print "files addition socket timeout : " + TCP_IP
+        # print "files addition socket timeout : " + TCP_IP
         tcpsock.close()
         return
     tcpsock.close()
@@ -261,7 +261,8 @@ def sendObj(port, IPAddr, obj):
         p.send(msg)
         p.close()
     except socket.error , exc:
-        print "Error Caught : ",exc
+        print ""
+        # print "Error Caught : ",exc
 
 def heartbeat():
     global IP_supernode
@@ -272,16 +273,16 @@ def heartbeat():
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
     tcpsock.bind((TCP_IP, TCP_PORT))
+    tcpsock.settimeout(60)
     while True:
-        tcpsock.settimeout(10)
         try:
-            print "Listening for Live Status"
+            # print "Listening for Live Status"
             tcpsock.listen(5)
             (conn, (ip, port)) = tcpsock.accept()
             # print "---",ip,"---"
             msg = conn.recv(5096)
             data = pickle.loads(msg)
-            print "Super Node is Alive ", data
+            print "Super Node ",ip," is Alive "
             listFiles()
         except socket.timeout as e:
             print "Alive Checker socket timeout : " + TCP_IP
@@ -309,13 +310,12 @@ def superNodeAssign():
         broadcast.close()
         if data is not None:
             IP_supernode = str(data)
-            print "-------> ",data,"<__"
-            print "--->",addr[0],"<--"
+            # print "-------> ",data,"<__"
+            # print "--->",addr[0],"<--"
             IP_supernode = IP_supernode.strip('\n')
             time.sleep(1)
 
             sendMsgUDP(8090, addr[0], "ACK") #sedning ACK
-
             break
         time.sleep(1)
     print "Super Node Ip Address : "+ str(IP_supernode)
@@ -374,24 +374,27 @@ def sharing(ipList, requestedFile):
     BUFFER_SIZE = 640000
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((TCP_IP, TCP_PORT))
-    filename = str(requestedFile)
-    s.send(filename)
+    try:
+        s.connect((TCP_IP, TCP_PORT))
+        filename = str(requestedFile)
+        s.send(filename)
+    except socket.error, exc:
+        print ""
     start = time.time()
     with open(filename, 'wb') as f:
-        print 'file opened'
+        # print 'file opened'
         while True:
             #print('receiving data...')
             data = s.recv(BUFFER_SIZE)
             # print('data=%s', (data))
             if not data:
                 f.close()
-                print 'file close()'
+                # print 'file close()'
                 break
             # write data to a file
             f.write(data)
     end  = time.time()
-    print 'Successfully get the file'
+    print 'Successfully Downloaded the file'
     print 'Time taken to Download file is : ',end-start
     s.close()
     print('connection closed')
@@ -458,7 +461,7 @@ def listFiles():
         print("-------> If List Files Exist <-------")
         originalFileContent = dumpContent(filename)
         # fileDump = []
-        print originalFileContent
+        # print originalFileContent
         os.remove('listFiles.csv')
         fileNameList = []
         newFileNameList = []
@@ -474,6 +477,7 @@ def listFiles():
                 dateStampList.append(fileN[5])
                 timeStampList.append(fileN[6])
 
+            # print "###############################"
             for i in range(1,numFiles-1):
                 item = fileList[i].split(' ')
                 date = str(item[0]) + str(item[1])
@@ -485,11 +489,10 @@ def listFiles():
                 if(fileN in fileNameList):
                     index = fileNameList.index(fileN)
                     #checking if timestamp are same or not
-                    print "###############################"
-                    print "File Name :" + fileN
+                    # print "File Name :" + fileN
                     
                     if dateStampList[index] < date:
-                        print dateStampList[index] + date
+                        # print dateStampList[index] + date
                         # print "gandu"
                         fsp = FileSplitter()
                         fsp.doWork(fileN, 'split')
@@ -500,7 +503,7 @@ def listFiles():
 
                     elif dateStampList[index] == date:
                         if timeStampList[index] < time:
-                            print timeStampList[index] + time
+                            # print timeStampList[index] + time
                             fsp = FileSplitter()
                             fsp.doWork(fileN, 'split')
                             hashes = computeHash(fileN)
@@ -512,7 +515,7 @@ def listFiles():
                     else:
                         fileDump.append([fileN, hashesList[index][0], hashesList[index][1], hashesList[index][2], hashesList[index][3], date, time])
                 else:
-                    print "File Not Present"
+                    # print "File Not Present"
                     fsp = FileSplitter()
                     fsp.doWork(fileN, 'split')
                     hashes = computeHash(fileN)
@@ -523,13 +526,13 @@ def listFiles():
             ## Get filename that need to be delete from SuperNode
             # fileNotNeeded = Diff(newFileNameList,fileNameList)
             fileNotNeeded = Diff(fileNameList, newFileNameList)
-            print  "--------------------------------"
-            print fileNotNeeded
-            print  "--------------------------------"
+            # print  "--------------------------------"
+            # print "File Not Needed :->",fileNotNeeded
+            # print  "--------------------------------"
             for names in fileNotNeeded:
                 filewriter.writerow([names,'0','0','0','0',"delete",'0','0'])
     fileContents = dumpContent('listFiles.csv')
-    print "->>>fileContents_-------->",fileContents
+    # print "->>>fileContents_-------->",fileContents
 
     os.remove('listFiles.csv')
     # print "--> printing file Dump <--"
@@ -541,17 +544,20 @@ def listFiles():
 
     # sending csv file to supernode
     msg = pickle.dumps(fileContents)
-    print "Message ---> "+msg
+    # print "Message ---> "+msg
     TCP_IP = IP_supernode
     TCP_PORT = 44445
     BUFFER_SIZE = 5000
-    print "TCP->" + TCP_IP,"<--"
+    # print "TCP->" + TCP_IP,"<--"
 
     p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    p.connect((str(TCP_IP), TCP_PORT))
-    p.send(msg)
+    try:
+        p.connect((str(TCP_IP), TCP_PORT))
+        p.send(msg)
+    except socket.error, exc:
+        print "Error in ListFiles:",exc
     p.close()
-    print "__Updated File List Sent__"
+    # print "__Updated File List Sent__"
     return
 
 def sendMsgUDP(port, ip, msg):

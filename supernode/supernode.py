@@ -38,11 +38,11 @@ def myIP():
 # ---------------------Inter Super node communication---------------------
 
 def recvFileCache():
-    print ("----inside recv file cache---")
+    # print ("----inside recv file cache---")
     global fileCache
     tempCache = recvObj(PORT_superNodeFileCache, 10)
     if len(fileCache)==0 and tempCache is not None:
-        print tempCache
+        # print tempCache
         fileCache = tempCache
 
 def sendFileCache(ipAddr):
@@ -91,7 +91,8 @@ def getSuperNodes1():
                 print "New Connected SuperNode2 :-"+addr[0]+"-"
                 superNodeList.append(addr[0])
     except socket.error, exc:
-        print "Some Error in Supernode 1",exc
+        print "Ready to receive Connections"
+        # print "Some Error in Supernode 1",exc
     sNode.close()
 
     #sync messages
@@ -105,7 +106,8 @@ def getSuperNodes1():
         p.send("hola, amoebas!")
         p.close()
     except socket.error , exc:
-        print "Error Caught : ",exc
+        # print "Error Caught : ",exc
+        print ""
 
     recvFileCache()
     
@@ -143,11 +145,10 @@ def getSuperNodes2(addr):
         msg = conn.recv(5096)
         tcpsock.close()
     except socket.error as e:
-        print "files addition socket timeout : " + TCP_IP
+        # print "files addition socket timeout : " + TCP_IP
         tcpsock.close()
         return
     tcpsock.close()
-
 
     sendFileCache(addr)
     print("------------------cache after send file------------")
@@ -160,34 +161,40 @@ def getUpdates():
     BUFFER_SIZE = 5096
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    print("---------in get Update s->>>>>>>>"+str(myIPAddr)+"<<<<<<<,,")
+    # print("---------in get Update s->>>>>>>>"+str(myIPAddr)+"<<<<<<<,,")
 
     tcpsock.bind((myIPAddr, PORT_updateSuperNode))
 
     while True:
         tcpsock.listen(5)
-        print "----update superNode waiting=--------"
+        # print "----update superNode waiting=--------"
         (conn, (ip,port)) = tcpsock.accept()
         print 'Got connection from ', (ip,port)
         data, addr = conn.recvfrom(5096)
         if data !='':
             print "---------------------updating superNode -------------------"
-            print data
+            # print data
             
             msg = pickle.loads(data)
             
             for x in msg:
-                print x
+                # print x
                 if(x[5] == "add"):
                     print "adding files -->"+ myIPAddr +"-->fileName-->"+ x[0]
-                    childNodes[myIPAddr].fileMap[x[0]] = File(x[0], x[1], x[2], x[3], x[4])
+                    # # "---------test this begin-------------"
+                    # if(childNodes.get(myIPAddr) is None):
+                    #     print "new node created"
+                    #     childNodes[myIPAddr]=(Node(myIPAddr, True))
+                    # # ________________test this end_________________________
+                    # childNodes[myIPAddr].fileMap[x[0]] = File(x[0], x[1], x[2], x[3], x[4])
                     fileCache[x[0]].append(myIPAddr)
                 elif(x[5] == "delete"):
                     print "deleting files -->"+ myIPAddr+"-->filename-->"+ x[0]
-                    del(childNodes[myIPAddr].fileMap[x[0]])
-                    fileCache[x[0]].remove(myIPAddr)
-                    if(len(fileCache[x[0]])==0):
-                        del(fileCache[x[0]])
+                    # del(childNodes[myIPAddr].fileMap[x[0]])
+                    if(myIPAddr in fileCache[x[0]]):
+                        fileCache[x[0]].remove(myIPAddr)
+                        if(len(fileCache[x[0]])==0):
+                            del(fileCache[x[0]])
         conn.close()
     tcpsock.close()
 
@@ -237,7 +244,8 @@ def recvObj(port, tout = 4):
         tcpsock.close()
         return data 
     except socket.timeout as e:
-        print "files addition socket timeout : " + TCP_IP
+        # print "Timout in Recieve Object"
+        # print "files addition socket timeout : " + TCP_IP
         tcpsock.close()
         return
     tcpsock.close()
@@ -257,7 +265,23 @@ def sendObj(port, IPAddr, obj):
         p.send(msg)
         p.close()
     except socket.error , exc:
-        print "Error Caught : ",exc
+	   print ""
+        # print "Error Caught in SendObj : ",exc
+
+# returns the list of all filenames from alive nodes.
+# PORT 9001
+def showFile(IPAddr):
+    result =[]
+    for x in fileCache:
+        result.append(x)
+    sendObj(9001, IPAddr, result)
+    
+# gets filename and returns list of IP
+# PORT 9002, 9003
+def findFile(IPAddr):
+    filename = recvObj(9002)
+    print "Filename  : ",filename
+    sendObj(9003, IPAddr, loadBal(filename))
 
 # thread running continuously to cater to the requests made by the clients
 # port 9090
@@ -278,46 +302,33 @@ def reqHandler():
             print "Download Complete"
             transfer_done(addr[0])
 
-# returns the list of all filenames from alive nodes.
-# PORT 9001
-def showFile(IPAddr):
-    result =[]
-    for x in fileCache:
-        result.append(x)
-    sendObj(9001, IPAddr, result)
-    
-# gets filename and returns list of IP
-# PORT 9002, 9003
-def findFile(IPAddr):
-    filename = recvObj(9002)
-    print "Filename  : ",filename
-    sendObj(9003, IPAddr, loadBal(filename))
 
 # load balancer, finds the IP addr with the min no of live requests
 def loadBal(filename):
     maximum = 10000
     resIP = ""
-    print "in load bal"
+    print "Doing Load Balancing"
     for x in fileCache[filename]:
         print "--------------"
-        print x
+        print "IP :->",x
         print childNodes[x].count
         print "--------------"
         
         if(childNodes[x].count<maximum):
             resIP = childNodes[x].IPAddr
             minimum = childNodes[x].count
-    print resIP
-    print childNodes[resIP]
+    # print resIP
+    # print childNodes[resIP]
     childNodes[resIP].count+=1
     return resIP
 
 def transfer_done(IPAddr):
     if(childNodes[IPAddr].count>0):
         childNodes[IPAddr].count-=1
+    print "Transfer Done"
 
 def handleFiles(IPAddr):
-    print ("_______handle files _________"+ str(IPAddr)+"_______________")
+    # print ("_______handle files _________"+ str(IPAddr)+"_______________")
     
     TCP_IP = myIPAddr
     
@@ -325,53 +336,55 @@ def handleFiles(IPAddr):
     BUFFER_SIZE  = 5096
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-    tcpsock.bind((TCP_IP, TCP_PORT))
-    tcpsock.settimeout(10) 
+    tcpsock.settimeout(30)
     try:
+        tcpsock.bind((TCP_IP, TCP_PORT))
         tcpsock.listen(5)
         (conn, (ip, port)) = tcpsock.accept()
         msg = conn.recv(5096)
         # print ("____________________")
-        print msg
+        # print msg
         # print ("____________________")
 
         data = pickle.loads(msg)
         #push file updates to all the supernodes
         sendUpdates(data)
-        print "----------"
+        # print "----------"
         for x in data:
-            print x
+            # print x
             if(x[5] == "add"):
-                print "adding files -->"+ IPAddr +"-->fileName-->"+ x[0]
+                # print "adding files -->"+ IPAddr +"-->fileName-->"+ x[0]
                 childNodes[IPAddr].fileMap[x[0]] = File(x[0], x[1], x[2], x[3], x[4])
-                print("_____________debugging ki ma_________________________")
-                print("filecahce->", fileCache)
-                print("x[0]", x[0])
-                print("IPADDR->", IPAddr)
-                print(fileCache[x[0]])
-                print("_______________________________________________________")
+                # print("_____________debugging ki ma_________________________")
+                # print("filecahce->", fileCache)
+                # print("x[0]", x[0])
+                # print("IPADDR->", IPAddr)
+                # print(fileCache[x[0]])
+                # print("_______________________________________________________")
                 fileCache[x[0]].append(IPAddr)
             elif(x[5] == "delete"):
-                print "deleting files -->"+ IPAddr+"-->filename-->"+ x[0]
+                # print "deleting files -->"+ IPAddr+"-->filename-->"+ x[0]
                 del(childNodes[IPAddr].fileMap[x[0]])
                 fileCache[x[0]].remove(IPAddr)
                 if(len(fileCache[x[0]])==0):
                     del(fileCache[x[0]])
 
-        print "----------"
+        # print "----------"
 
         x = childNodes[IPAddr]
+        print "--> Printing Filenames <--"
         for y in x.fileMap:
             print(x.fileMap[y].name)                     
+        print "--------------------------"
         tcpsock.close()
-        print "Exiting Try Staement in Handle Files"
+        # print "Exiting Try Staement in Handle Files"
         return
     except socket.error ,exc:
-        print "Error in HandleFile : ",exc
-        print "files addition socket timeout : " + TCP_IP
+        # print "Error in HandleFile : ",exc
+        # print "files addition socket timeout : " + TCP_IP
         tcpsock.close()
         return
-    print "Exiting Handle Files"
+    # print "Exiting Handle Files"
 
 def assignSuperNode():
     # accept requests to become superNode
@@ -412,16 +425,16 @@ def assignSuperNode():
                         #TODO 
                         handleFiles(addr[0])
             except socket.timeout as e:
-                print "Error caught during super Node Assignment :",e
+                print "Supernode already assigned to the Node :("
+                # print "Error caught during super Node Assignment :",e
             ## ACK Listening END
             
 def heartBeat():
-    print 'Inside HeartBeat'
-    isCheck = False
+    # print 'Inside HeartBeat'
     time.sleep(10)
     while True:
         # TCP_IP = "10.196.700.181"
-        print "---------------------------------",fileCache,"--------------------------"
+        # print "---------------------------------",fileCache,"--------------------------"
         for x in list(childNodes):
             child = childNodes[x]
             if(child.liveStatus):
@@ -442,10 +455,10 @@ def heartBeat():
                     print "Node is Alive :) " + TCP_IP
                     handleFiles(TCP_IP)
                 except socket.error , exc:
-                    print "Error Caught in live status : ",exc
+                    # print "Error Caught in live status : ",exc
                     child.liveStatus = False
                     print "Node is Dead:( ",TCP_IP
-        time.sleep(5)
+        time.sleep(40)
 
 # def SupernodeToSupernode():
 #     supernodeIPList = ['10.196.7.181']
